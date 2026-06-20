@@ -1,0 +1,226 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>
+<i>gMidSurf</i>: Hierarchical GPU-based Mid-surface Abstraction for Thin-walled CAD Models
+</title>
+
+<meta name="GENERATOR" content="MSHTML 8.00.6001.18975">
+</head><body link="#95DDFF" bgcolor="#333333" text="#dddddd" vlink="#AAAAAA"><font face="verdana,sans-serif"><p:colorscheme colors="#666699,#ffffff,#3e3e5c,#ccff66,#60597b,#6666ff,#99ccff,#ffff99">
+<div style="mso-char-wrap: 1; mso-kinsoku-overflow: 1; tab-interval: .5625in" class="O" v:shape="_x0000_s1026"><font size="+4">
+<i>gMidSurf</i>: Hierarchical GPU-based Mid-surface Abstraction for Thin-walled CAD Models
+</font></div>
+<h3>by
+  <font face="verdana,sans-serif">Li Ye<sup><font face="Verdana">1</font></sup>
+  <font face="verdana,sans-serif">, Xinhang Zhou<sup><font face="Verdana">1</font></sup>
+  <font face="verdana,sans-serif">, Xingyu Yang<sup><font face="Verdana">1</font></sup>
+  <font face="verdana,sans-serif">, Peng Fan<sup><font face="Verdana">1</font></sup>
+  <font face="verdana,sans-serif">, Ruofeng Tong<sup><font face="Verdana">1</font></sup>
+  <font face="verdana,sans-serif">, Hailong Li<sup><font face="Verdana">2</font></sup>
+  <font face="verdana,sans-serif">, Peng Du<sup><font face="Verdana">1</font></sup>
+  <font face="verdana,sans-serif">, and <a href="https://min-tang.github.io/">Min Tang</a><sup><font face="Verdana">1, *</font></sup>
+</h3>
+ <p><i><font size="4" face="Times New Roman">1 - Zhejiang University, Hangzhou, 310007, China</font></i></p>
+ <p><i><font size="4" face="Times New Roman">2 - Shenzhen Poisson Software Co., Ltd., Shenzhen, 518129, China</font></i></p>
+ <p><i><font size="4" face="Times New Roman">* - Corresponding Author</font></i></p>
+
+ <p><font face="verdana,sans-serif"><font color="#ffffff" size="5" face="Verdana"><b>Abstract</b></font>
+</font></p><p><font face="verdana,sans-serif">
+Mid-surface abstraction is essential for finite element analysis of thin-walled CAD models, yet existing face pairing-based methods
+suffer from quadratic complexity and CPU-bound bottlenecks, limiting scalability for variable-thickness models. We present
+<i>gMidSurf</i>, a GPU-accelerated pipeline that transforms the two computational bottlenecks in mid-surface abstraction (face pairing
+and mid-point generation) into massively parallel operations. For face pairing, we introduce a hierarchical filtering strategy that
+progressively culls candidate pairs through three GPU-optimized gates: normal compatibility, simplified overlap criterion, and
+LBVH-based distance queries, reducing the search space by 10&ndash;100&times; while maintaining cache coherence. For mid-point
+generation, we employ parallel distance dilation followed by bracket-and-bisect refinement for precise equidistant point localization.
+This method handles variable-thickness models with complex surfaces through complete dilation, thereby avoiding gaps and truncations
+that occur in previous methods. Experimental results on real-world benchmarks demonstrate that <i>gMidSurf</i> achieves 4.2&times;&ndash;18.5&times;
+speedups in face pairing and 4.8&times;&ndash;9.8&times; in mid-point generation compared to CPU implementations, yielding 5&times;&ndash;15&times; acceleration
+on a commodity GPU (NVIDIA RTX 5090D) compared to state-of-the-art methods while maintaining geometric accuracy.
+<br>
+&nbsp;</font></p>
+
+<p align="center"><font face="verdana,sans-serif">&nbsp;</font>
+<img border="0" src="./files/Fig_teaser.jpg" width="900">
+</p>
+
+<p>
+<font face="verdana,sans-serif"><i><b>Overview: </b></i>
+The input thin-walled model is first discretized into triangular meshes on the GPU. Then (a) hierarchical GPU-based face pairing
+applies three progressive filtering gates (normal, overlap, and distance) to prune candidate face pairs by 10&ndash;100&times; and identify
+the face group pairs (FGPs), abstracting 1-1 face pairs into n-n FGPs through parallel bipartite graph optimization. Next, (b) GPU-based
+mid-point generation produces initial mid-points via parallel distance dilation and refines them to precise equidistant points through a
+bracket-and-bisect kernel. Finally, the model undergoes surface fitting and trimming operations to determine the boundaries of the
+mid-surface, yielding the final output mid-surface.
+</font>
+<font face="verdana,sans-serif">
+</font></p>
+
+<br>
+
+<p align="center"><font face="verdana,sans-serif">&nbsp;</font>
+<img border="0" src="./files/Fig_pipeline.jpg" width="430">
+</p>
+
+<p>
+<font face="verdana,sans-serif"><i><b>Pipeline: </b></i></font>
+<font face="verdana,sans-serif">
+The <i>gMidSurf</i> pipeline keeps geometry resident on the GPU through both core stages. Two computational bottlenecks &mdash;
+<b>hierarchical GPU-based face pairing</b> and <b>dilation-based precise mid-point generation</b> &mdash; are recast as massively parallel
+operations, while surface fitting and trimming run on the host. This end-to-end design preserves B-Rep modeling intent, supports both
+1-1 and n-n face pairs, and handles constant- and variable-thickness regions robustly.
+</font>
+</p>
+
+<p>
+<font face="verdana,sans-serif"><font color="#ffffff" size="4" face="Verdana"><b>Technical Contributions</b></font></font>
+<font face="verdana,sans-serif">
+<ul>
+  <li>
+    <b>Full GPU-based face pairing with hierarchical culling.</b> Normal, overlap, and distance tests are cast as GPU-friendly gates
+    backed by LBVH traversal, pruning candidates by 10&times;&ndash;100&times; before fine checks and yielding near-linear scaling with face count.
+  </li>
+  <li>
+    <b>Branchless mid-point solver for variable-thickness.</b> A bracket-and-bisect kernel equalizes distances robustly across planes,
+    quadrics, and free-form NURBS while minimizing warp divergence and maximizing throughput.
+  </li>
+  <li>
+    <b>End-to-end GPU design that preserves B-Rep intent.</b> Geometry stays resident on device through face pairing and mid-point
+    generation, supports 1-1 and n-n face pairs, and interoperates with trimming on the host to balance robustness and speed.
+  </li>
+  <li>
+    <b>Extensive evaluation on industrial-style models.</b> Stage-wise and end-to-end speedups over a tuned multi-core CPU baseline
+    and previous methods, with more accurate results on variable-thickness parts and complex free-form models.
+  </li>
+</ul>
+</font>
+</p>
+
+<p>
+<font face="verdana,sans-serif"><font color="#ffffff" size="4" face="Verdana"><b>Key Results</b></font></font>
+<font face="verdana,sans-serif">
+<ul>
+  <li>Hierarchical filtering gates reduce the candidate face-pair search space by <b>10&times;&ndash;100&times;</b>.</li>
+  <li><b>4.2&times;&ndash;18.5&times;</b> speedup for face pairing and <b>4.8&times;&ndash;9.8&times;</b> for mid-point generation versus CPU implementations.</li>
+  <li><b>5&times;&ndash;15&times;</b> end-to-end acceleration on a single NVIDIA RTX 5090D GPU compared with state-of-the-art methods (MidSurfer, Parasolid, Zhu et al.).</li>
+  <li>Complete dilation eliminates the gaps and truncations of prior methods while keeping the maximum positional deviation within 10<sup>-5</sup> (FP32 vs. FP64).</li>
+</ul>
+</font>
+</p>
+
+<br>
+
+<p align="center"><font face="verdana,sans-serif">&nbsp;</font>
+<img border="0" src="./files/Fig_Benchmark.jpg" width="780">
+</p>
+
+<p>
+<font face="verdana,sans-serif"><i><b>Benchmark: </b></i></font>
+<font face="verdana,sans-serif">
+Eight iconic models (M1&ndash;M8) selected from the GrabCAD library cover a diverse range of geometric and topological configurations,
+including constant- and variable-thickness FGPs (C/V-FGPs), high curvature, n-n pairings, and complex free-form surfaces.
+<ul>
+  <li>
+    Model 1: An instrument microphone clip, consisting of 30 faces with no constant-thickness FGPs (all 11 FGPs are variable),
+    used to validate the algorithm&rsquo;s basic capabilities.
+  </li>
+  <li>
+    Model 2: A motorcycle winglet with 61 faces, including 15 variable-thickness FGPs (V-FGPs) and 3 constant-thickness FGPs (C-FGPs).
+    This model presents a scenario where both C-FGPs and V-FGPs exist.
+  </li>
+  <li>
+    Model 3: A pipe bracket with 74 faces, where most V-FGPs exhibit significant curvature variations (&gt;15&deg; angular variation
+    between paired faces), used to evaluate geometric correctness under challenging dilation conditions.
+  </li>
+  <li>
+    Model 4: A car wheel rim from the automotive industry, featuring 121 faces, including 20 V-FGPs and 19 n-n face pairs. Its
+    multi-ring topology, local blends, and diverse variable-thickness scenarios pose significant challenges for face pairing.
+  </li>
+  <li>
+    Model 5: A table flower pot with 195 faces, containing the most V-FGPs (24) among all benchmarks. It demonstrates the
+    algorithm&rsquo;s capability to handle models with great curvature variations.
+  </li>
+  <li>
+    Model 6: A multi-port distributor from the mechanical design domain, with 215 faces and 52 C-FGPs &mdash; the highest C-FGP
+    count among all benchmarks &mdash; demonstrating scenarios where constant-thickness structures predominate.
+  </li>
+  <li>
+    Model 7: A rear spoiler with 236 faces, with all FGPs exhibiting highly similar geometric primitives and gentle curvature
+    variations, testing the filtering gates under low-discrimination conditions.
+  </li>
+  <li>
+    Model 8: An aircraft model from a real-world aerospace scenario with 286 faces and highly complex topological and geometric
+    structures, used to verify algorithm robustness under the most challenging configurations.
+  </li>
+</ul>
+
+</font></p>
+
+<h2><font face="verdana,sans-serif">Contents </font></h2><font face="verdana,sans-serif">
+</font></font><p>
+
+<font face="verdana,sans-serif"><font face="verdana,sans-serif"><font color="#ffffff" face="Verdana">
+<a href="./files/gMidSurf_CAD.pdf">Paper</a>&nbsp;(PDF 5.5 MB)
+</font>
+<p></p>
+<font face="verdana,sans-serif"><a href="./files/gMidSurf_CAD_Video.mp4">Supplementary Video</a>
+ <font color="#ffffff" face="Verdana">(MP4 99.7 MB) </font></font><font face="verdana,sans-serif">
+</font>
+<p></p>
+<!-- <font face="verdana,sans-serif"><font face="verdana,sans-serif"><font color="#ffffff" face="Verdana">
+Source Code: <a href="https://github.com/">https://github.com/</a>&nbsp;
+</font> -->
+
+</font><font face="verdana,sans-serif">
+</font></font><font face="Verdana" color="#ffffff"></font></p><p><font face="Verdana" color="#ffffff">
+Li Ye, Xinhang Zhou, Xingyu Yang, Peng Fan, Ruofeng Tong, Hailong Li, Peng Du and Min Tang. 2026.
+<i>gMidSurf</i>: Hierarchical GPU-based Mid-surface Abstraction for Thin-walled CAD Models.
+Computer-Aided Design (To appear).
+
+</font><font face="verdana,sans-serif">
+</font></p><p><font face="verdana,sans-serif">&nbsp;&nbsp;&nbsp;@article{ye26gmidsurf,
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;author = {Ye, Li and Zhou, Xinhang and Yang, Xingyu and Fan, Peng and Tong, Ruofeng and Li, Hailong and Du, Peng and Tang, Min},
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;title = {gMidSurf: Hierarchical GPU-based Mid-surface Abstraction for Thin-walled CAD Models},
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;journal = {Computer-Aided Design},
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;year = {2026},
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;publisher = {Elsevier}
+<br>&nbsp;&nbsp;&nbsp;}
+</font></p>
+
+<h2><font face="verdana,sans-serif">&nbsp;</font></h2><font face="verdana,sans-serif">
+<h2>Related Links</h2>
+<p><a href="../MidSurfer/">MidSurfer: Efficient Mid-surface Abstraction from Variable Thin-walled Models</a></p>
+<p><a href="../gDist/">gDist: Efficient Distance Computation between 3D Meshes on GPU</a></p>
+<p><a href="../CTSN/">CTSN: Predicting Cloth Deformation for Skeleton-based Characters with a Two-stream Skinning Network</a></p>
+<p><a href="../DCloth/">D-Cloth: Skinning-based Cloth Dynamic Prediction with a Three-stage Network</a></p>
+<p><a href="../NCloth/">N-Cloth: Predicting 3D Cloth Deformation with Mesh-Based Networks</a></p>
+<p><a href="../PCloth/">P-Cloth: Interactive Cloth Simulation on Multi-GPU Systems using Dynamic Matrix Assembly and Pipelined Implicit Integrators</a></p>
+<p><a href="../ICloth/">I-Cloth: Incremental Collision Handling for GPU-Based Interactive Cloth Simulation</a></p>
+<p><a href="../PSCC/">PSCC: Parallel Self-Collision Culling with Spatial Hashing on GPUs</a></p>
+<p><a href="../gpuCloth/">I-Cloth: API for fast and reliable cloth simulation with CUDA</a></p>
+<p><a href="../BVH-OR/">Efficient BVH-based Collision Detection Scheme with Ordering and Restructuring</a></p>
+<p><a href="http://gamma.cs.unc.edu/PCD/">MCCD: Multi-Core Collision Detection between Deformable Models using Front-Based Decomposition</a></p>
+<p><a href="http://gamma.cs.unc.edu/CBC/">Interactive Continuous Collision Detection between Deformable Models using Connectivity-Based Culling</a></p>
+<p><a href="http://gamma.cs.unc.edu/BSC/index.htm#TightCCD">TightCCD: Efficient and Robust Continuous Collision Detection using Tight Error Bounds</a></p>
+<p><a href="http://gamma.cs.unc.edu/BSC/">Fast and Exact Continuous Collision Detection with Bernstein Sign Classification</a></p>
+<p><a href="http://gamma.cs.unc.edu/gcloth/">A GPU-based Streaming Algorithm for High-Resolution Cloth Simulation</a></p>
+<p><a href="http://gamma.cs.unc.edu/CPF/">Continuous Penalty Forces</a></p>
+<p><a href="http://gamma.cs.unc.edu/DynamicB/">UNC dynamic model benchmark repository</a></p>
+<p><a href="http://gamma.cs.unc.edu/CSTREAMS/">Collision-Streams: Fast GPU-based Collision Detection for Deformable Models</a></p>
+<p><a href="http://gamma.cs.unc.edu/DNF/">Fast Continuous Collision Detection using Deforming Non-Penetration Filters</a></p>
+<p><a href="http://gamma.cs.unc.edu/RTRI/">Fast Collision Detection for Deformable Models using Representative-Triangles</a></p>
+<p><a href="http://gamma.cs.unc.edu/DEFORMCD/">DeformCD: Collision Detection between Deforming Objects</a></p>
+<p><a href="http://gamma.cs.unc.edu/SELFCD/">Self-CCD: Continuous Collision Detection for Deforming Objects</a></p>
+<p><a href="http://gamma.cs.unc.edu/CDCD/">Interactive Collision Detection between Deformable Models using Chromatic Decomposition</a></p>
+<p><a href="http://gamma.cs.unc.edu/DVD/">Fast Proximity Computation Among Deformable Models using Discrete Voronoi Diagrams</a></p>
+<p><a href="http://gamma.cs.unc.edu/CULLIDE/">CULLIDE: Interactive Collision Detection between Complex Models using Graphics Hardware </a></p>
+<p><a href="http://gamma.cs.unc.edu/RCULLIDE/">RCULLIDE: Fast and Reliable Collision Culling using Graphics Processors </a></p>
+<p><a href="http://gamma.cs.unc.edu/QCULLIDE/">Quick-CULLIDE: Efficient Inter- and Intra-Object Collision Culling using Graphics Hardware</a></p>
+<p><a href="http://gamma.cs.unc.edu/research/collision/">Collision Detection</a></p>
+<p><a href="http://gamma.cs.unc.edu/">UNC GAMMA Group </a></p>
+
+<h2>Acknowledgements</h2>
+<p>
+This work was funded in part by "Pioneer" and "Leading Goose" R&D Program of Zhejiang Province (No. 2025C01086).
+<p>&nbsp;</p>
+<p></p><p><br><a href="mailto:tang_m@zju.edu.cn">tang_m@zju.edu.cn</a>
+</p><p></p></font>
+</font></p:colorscheme></font></body></html>
