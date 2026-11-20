@@ -10,7 +10,7 @@ Over the years, I have been fortunate to broaden my academic horizons through vi
 My research interests are driven by curiosity and span a range of topics, including solid modeling, collision detection and handling, cloth simulation, and GPU-based computational acceleration. Through these efforts, I have published more than 180 papers in journals and conferences, including over 80 SCI-indexed articles. My work has appeared in leading conferences such as SIGGRAPH, SIGGRAPH Asia, AAAI, and CVPR, and in journals such as ACM Transactions on Graphics and IEEE Transactions on Visualization and Computer Graphics.
 I also actively contribute to the broader computer science community as a senior member of the China Computer Federation (CCF) and a member of the Chinese Association for Artificial Intelligence (CAAI), the Association for Computing Machinery (ACM), and the Institute of Electrical and Electronics Engineers (IEEE).
 
-I have served as a reviewer for many international conferences (SIGGRAPH, SIGGRPAH Asia, I3D, HPG, WSCG, ICRA, AAAI, etc.) and journals (ACM Transaction on Graphics, IEEE Transactions on Visualization and Computer Graphics, IEEE Transactions on Haptics, The Visual Computer, etc.) and served as:
+I have served as a reviewer for many international conferences (SIGGRAPH, SIGGRAPH Asia, I3D, HPG, WSCG, ICRA, AAAI, etc.) and journals (ACM Transactions on Graphics, IEEE Transactions on Visualization and Computer Graphics, IEEE Transactions on Haptics, The Visual Computer, etc.) and served as:
 - Technical Paper Committee Member of SIGGRAPH Asia 2023,
 - Program Committee Member of CVM 2024, 2025, 2026, 2027, 
 - Program Committee Member of CGI 2023, 2024, 2025, 2026, 
@@ -26,6 +26,8 @@ I have served as a reviewer for many international conferences (SIGGRAPH, SIGGRP
 - International Program Committee Member of SCA 2019, 2023, 2024,
 - Board of Reviewers Member of WSCG 2012, 2013, 2014,
 - Local Organizing Chair of CVM 2013. 
+
+## [Students and Team](Data/students-ch.html) (in Chinese)
 
 ## [Contact Information](Data/contact.html)
 
